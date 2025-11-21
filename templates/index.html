@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aircraft Market Value - Cessna 172N</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .average-price {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            font-size: 1.5em;
+        }
+
+        .average-price .price {
+            font-size: 3em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .controls {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            color: #667eea;
+            font-weight: 600;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .loading.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stats {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            flex: 1;
+            min-width: 200px;
+            text-align: center;
+        }
+
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #2a5298;
+        }
+
+        .table-container {
+            padding: 30px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        tbody tr {
+            transition: background 0.2s;
+        }
+
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .price-cell {
+            font-weight: bold;
+            color: #28a745;
+            font-size: 1.1em;
+        }
+
+        .link-cell a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .link-cell a:hover {
+            text-decoration: underline;
+        }
+
+        .avionics-cell {
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+
+        .avionics-tag {
+            display: inline-block;
+            background: #e9ecef;
+            padding: 3px 8px;
+            border-radius: 4px;
+            margin: 2px;
+            font-size: 0.85em;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+            font-size: 1.2em;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            margin: 20px 30px;
+            border-radius: 8px;
+            border: 1px solid #f5c6cb;
+            display: none;
+        }
+
+        .error.active {
+            display: block;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Aircraft Market Value Tracker</h1>
+            <p>Real-time market analysis for Cessna 172N</p>
+        </header>
+
+        <div class="average-price">
+            <div>Average Asking Price</div>
+            <div class="price" id="averagePrice">--</div>
+            <div id="priceCount">No data available</div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" id="scrapeBtn">
+                Fetch Latest Listings
+            </button>
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <span>Scraping listings... This may take a few minutes</span>
+            </div>
+        </div>
+
+        <div class="stats" id="stats" style="display: none;">
+            <div class="stat-item">
+                <div class="stat-label">Total Listings</div>
+                <div class="stat-value" id="totalListings">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Lowest Price</div>
+                <div class="stat-value" id="minPrice">--</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Highest Price</div>
+                <div class="stat-value" id="maxPrice">--</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Median Price</div>
+                <div class="stat-value" id="medianPrice">--</div>
+            </div>
+        </div>
+
+        <div class="error" id="error"></div>
+
+        <div class="table-container">
+            <div class="no-data" id="noData">
+                Click "Fetch Latest Listings" to load aircraft data
+            </div>
+
+            <table id="listingsTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Price</th>
+                        <th>Location</th>
+                        <th>Airframe Hours</th>
+                        <th>Engine Hours</th>
+                        <th>Propeller Hours</th>
+                        <th>Avionics</th>
+                        <th>Listing</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                </tbody>
+            </table>
+        </div>
+
+        <footer>
+            <p>Data sourced from Trade-A-Plane.com | Last updated: <span id="lastUpdated">Never</span></p>
+        </footer>
+    </div>
+
+    <script>
+        const scrapeBtn = document.getElementById('scrapeBtn');
+        const loading = document.getElementById('loading');
+        const noData = document.getElementById('noData');
+        const listingsTable = document.getElementById('listingsTable');
+        const tableBody = document.getElementById('tableBody');
+        const averagePrice = document.getElementById('averagePrice');
+        const priceCount = document.getElementById('priceCount');
+        const errorDiv = document.getElementById('error');
+        const stats = document.getElementById('stats');
+        const lastUpdated = document.getElementById('lastUpdated');
+
+        scrapeBtn.addEventListener('click', async () => {
+            // Reset UI
+            errorDiv.classList.remove('active');
+            scrapeBtn.disabled = true;
+            loading.classList.add('active');
+
+            try {
+                const response = await fetch('/api/scrape', {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to scrape listings');
+                }
+
+                displayListings(data.listings);
+                displayStats(data.stats);
+
+                // Update last updated time
+                lastUpdated.textContent = new Date().toLocaleString();
+
+            } catch (error) {
+                errorDiv.textContent = 'Error: ' + error.message;
+                errorDiv.classList.add('active');
+            } finally {
+                scrapeBtn.disabled = false;
+                loading.classList.remove('active');
+            }
+        });
+
+        function displayListings(listings) {
+            if (!listings || listings.length === 0) {
+                noData.style.display = 'block';
+                listingsTable.style.display = 'none';
+                return;
+            }
+
+            noData.style.display = 'none';
+            listingsTable.style.display = 'table';
+
+            // Clear existing rows
+            tableBody.innerHTML = '';
+
+            // Add rows
+            listings.forEach(listing => {
+                const row = document.createElement('tr');
+
+                // Price
+                const priceCell = document.createElement('td');
+                priceCell.className = 'price-cell';
+                priceCell.textContent = listing.price ? `$${Number(listing.price).toLocaleString()}` : 'N/A';
+                row.appendChild(priceCell);
+
+                // Location
+                const locationCell = document.createElement('td');
+                locationCell.textContent = listing.location || 'N/A';
+                row.appendChild(locationCell);
+
+                // Airframe hours
+                const airframeCell = document.createElement('td');
+                airframeCell.textContent = listing.airframe_hours || 'N/A';
+                row.appendChild(airframeCell);
+
+                // Engine hours
+                const engineCell = document.createElement('td');
+                engineCell.textContent = listing.engine_hours || 'N/A';
+                row.appendChild(engineCell);
+
+                // Propeller hours
+                const propCell = document.createElement('td');
+                propCell.textContent = listing.propeller_hours || 'N/A';
+                row.appendChild(propCell);
+
+                // Avionics
+                const avionicsCell = document.createElement('td');
+                avionicsCell.className = 'avionics-cell';
+                if (listing.avionics && listing.avionics.length > 0) {
+                    listing.avionics.forEach(avionics => {
+                        const tag = document.createElement('span');
+                        tag.className = 'avionics-tag';
+                        tag.textContent = avionics;
+                        avionicsCell.appendChild(tag);
+                    });
+                } else {
+                    avionicsCell.textContent = 'N/A';
+                }
+                row.appendChild(avionicsCell);
+
+                // URL
+                const urlCell = document.createElement('td');
+                urlCell.className = 'link-cell';
+                if (listing.url) {
+                    const link = document.createElement('a');
+                    link.href = listing.url;
+                    link.target = '_blank';
+                    link.textContent = 'View Listing';
+                    urlCell.appendChild(link);
+                } else {
+                    urlCell.textContent = 'N/A';
+                }
+                row.appendChild(urlCell);
+
+                tableBody.appendChild(row);
+            });
+        }
+
+        function displayStats(statsData) {
+            if (!statsData) return;
+
+            // Average price
+            if (statsData.average_price !== null) {
+                averagePrice.textContent = `$${Number(statsData.average_price).toLocaleString('en-US', {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                })}`;
+                priceCount.textContent = `Based on ${statsData.count} listings`;
+            }
+
+            // Show stats section
+            stats.style.display = 'flex';
+
+            // Total listings
+            document.getElementById('totalListings').textContent = statsData.count || 0;
+
+            // Min price
+            if (statsData.min_price !== null) {
+                document.getElementById('minPrice').textContent = `$${Number(statsData.min_price).toLocaleString()}`;
+            }
+
+            // Max price
+            if (statsData.max_price !== null) {
+                document.getElementById('maxPrice').textContent = `$${Number(statsData.max_price).toLocaleString()}`;
+            }
+
+            // Median price
+            if (statsData.median_price !== null) {
+                document.getElementById('medianPrice').textContent = `$${Number(statsData.median_price).toLocaleString()}`;
+            }
+        }
+    </script>
+</body>
+</html>
