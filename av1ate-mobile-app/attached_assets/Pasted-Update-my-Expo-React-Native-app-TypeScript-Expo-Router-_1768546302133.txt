@@ -1,0 +1,91 @@
+Update my Expo React Native app (TypeScript, Expo Router) for a post-launch patch.
+
+IMPORTANT CONTEXT (from screenshot):
+When tapping “Unlock Lifetime — $4.99” I see a popup:
+“Purchase Not Available — In-app purchases require an EAS development build. They don't work in Expo Go.”
+This happens when the app is run via Expo Go / QR.
+I need to handle this correctly and make IAP work in the real TestFlight/App Store build.
+
+Do NOT redesign the UI. Keep the Tesla-style dark UI. Make small, safe, production-ready changes.
+
+===============================
+1) REBRAND: AIRFAX -> AV1ATE Tracker
+===============================
+- Replace any user-visible “AIRFAX” string with “AV1ATE Tracker”
+- This includes paywall title “Unlock AIRFAX”
+- Ensure app.json/app.config displays “AV1ATE Tracker” wherever it affects UI text
+- Do NOT change bundle ID unless required (keep stable).
+
+===============================
+2) NOTIFICATIONS: Due Soon + Overdue
+===============================
+- Using expo-notifications, schedule local notifications:
+  - one when an item becomes “Due Soon”
+  - one when it becomes “Overdue”
+- Cancel/reschedule notifications when:
+  - Hobbs/Tach updated
+  - maintenance completion logged
+  - maintenance interval edited
+- Avoid duplicates: max 2 scheduled notifications per item (due soon, overdue).
+- Notification copy must be short, modern:
+  - Due soon title: “Due soon”
+    body: “Oil Change due in 10h” OR “Annual due in 7 days”
+  - Overdue title: “Overdue”
+    body: “Oil Change is overdue”
+- Tapping notification deep-links to that maintenance item details screen if possible.
+
+Create/Update:
+- services/notifications.ts (permission, schedule/cancel, deep links)
+- Call scheduling on app startup and after relevant updates.
+
+===============================
+3) IAP: Make Apple In-App Purchase work (TestFlight/App Store) + clean Expo Go behavior
+===============================
+Goal:
+- In TestFlight/App Store build: lifetime unlock purchase works and restore works.
+- In Expo Go: show a friendly message explaining purchases aren’t available there and how to test.
+
+Implementation requirements:
+A) Detect environment:
+- If running inside Expo Go, do NOT attempt IAP.
+- Replace the current popup message with a nicer one:
+  Title: “Purchases unavailable”
+  Body: “Purchases work in the App Store/TestFlight build. Please install the TestFlight version to unlock.”
+  Button: “OK”
+Optionally: add a secondary button “Open TestFlight” if a link exists (otherwise omit).
+
+B) Real IAP implementation (for builds):
+- Use react-native-iap (or project’s existing IAP library) compatible with Expo + production builds.
+- Product is a non-consumable lifetime unlock:
+  productId: "av1ate_lifetime_499" (use exactly this)
+- On Paywall:
+  - load product details and show price from store when available
+  - allow purchase
+  - allow restore purchases
+  - set entitlement “isPro” in AsyncStorage after confirmed purchase/restore
+- If store product fails to load: show “Store unavailable. Try again.”
+- Do not fake unlock. Only unlock after real transaction/restore.
+
+C) Testing:
+- Add a code comment + README note:
+  - IAP does not work in Expo Go
+  - IAP works in TestFlight/App Store builds
+  - Use Sandbox test users for purchases
+
+===============================
+4) FEEDBACK BUTTON: always open Google Form
+===============================
+- Update the Feedback screen so primary action opens the form URL in external browser:
+  https://forms.gle/tLWcxPXtR16PU1Zg7
+- Remove any code that tries to “send” feedback directly to the form.
+- Keep a local text field optionally for convenience.
+- Buttons:
+  - Primary: “Open feedback form” (opens URL)
+  - Secondary: “Copy” (copies typed feedback)
+- After opening the URL, show a toast/alert: “Thanks — please submit the form.”
+
+===============================
+DELIVERABLES
+===============================
+- Provide code changes implementing all 4 items.
+- Prov

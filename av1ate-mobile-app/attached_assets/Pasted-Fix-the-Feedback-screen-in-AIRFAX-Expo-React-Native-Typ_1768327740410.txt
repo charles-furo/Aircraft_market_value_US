@@ -1,0 +1,68 @@
+Fix the Feedback screen in AIRFAX (Expo React Native + TypeScript + Expo Router). Keep the Tesla-style UI. Make minimal changes.
+
+BUG 1 — iPhone keyboard blocks the “Send Feedback” button
+Problem:
+- On the Feedback screen, when the user types in the message field, the iOS keyboard stays up and blocks the “Send Feedback” button, so the user can’t submit.
+
+Fix requirements (must work on iPhone):
+- Wrap the Feedback screen in KeyboardAvoidingView:
+  - behavior="padding" on iOS
+  - set keyboardVerticalOffset appropriately (use safe area/header height if needed)
+- Place the content inside a ScrollView so it can scroll when keyboard is open.
+- Ensure button stays reachable:
+  - Prefer a fixed bottom action bar that sits above the keyboard, OR
+  - Ensure the ScrollView can scroll to the button and includes extra bottom padding.
+- Add “tap outside to dismiss keyboard”:
+  - Wrap outer area in TouchableWithoutFeedback + Keyboard.dismiss()
+- Set ScrollView prop:
+  - keyboardShouldPersistTaps="handled"
+- Make TextInput:
+  - multiline
+  - returnKeyType="done"
+  - onSubmitEditing should dismiss keyboard (or blur the field)
+- Confirm: user can type, dismiss keyboard, and tap Send.
+
+BUG 2 — Clarify and correct “Send Feedback” vs “Open Form”
+Current confusion:
+- “Send Feedback” appears to show a success alert even though it may not actually submit to the Google Form.
+- “Open Form” opens a docs.google.com/drive link that errors (“file does not exist”) because the URL is wrong or not configured.
+
+Fix requirements:
+1) Make “Send Feedback” actually submit to Google Form (when configured)
+- Use a config file (config/feedback.ts) with:
+  - GOOGLE_FORM_ACTION_URL (must be the formResponse endpoint)
+  - ENTRY_MESSAGE_ID (entry.xxxxx)
+  - ENTRY_EMAIL_ID (optional)
+  - ENTRY_META_ID (optional) for device/app/aircraft metadata
+  - GOOGLE_FORM_VIEW_URL (the public viewform URL)
+- Only show “Thanks! Your feedback has been sent.” AFTER a real submission attempt:
+  - Treat HTTP status 200 or 302 as success
+  - If request throws or status not success => show error:
+    “Couldn’t send right now. Please try again, or tap Open Form / Copy.”
+- While sending:
+  - disable button
+  - show loading state (spinner or “Sending…”)
+
+2) Fix “Open Form” to open the correct URL
+- “Open Form” must open GOOGLE_FORM_VIEW_URL (the public viewform link), NOT a Google Drive docs link.
+- If GOOGLE_FORM_VIEW_URL is missing/placeholder, show an alert:
+  “Feedback form not configured yet.”
+
+3) Add clear labels to avoid confusion
+- Rename buttons to:
+  - Primary: “Send” (submits to form)
+  - Secondary: “Open Form” (opens the web form)
+  - Secondary: “Copy” (copies formatted feedback)
+- Keep the existing Tesla styling.
+
+4) Make it easy to debug configuration
+- If config still has placeholder values (like YOUR_FORM_URL_HERE), show a small dev hint at bottom:
+  “Feedback form not configured.”
+- Do NOT pretend submission succeeded if not configured.
+
+DELIVERABLES
+- Fix keyboard issue so Send button is always accessible on iPhone
+- Ensure Send actually POSTs to the Google Form when configured
+- Ensure Open Form opens the correct viewform URL
+- Update success/error alerts accordingly
+- Provide a short summary of files changed and exactly where to paste the Google Form URLs and entry IDs

@@ -1,0 +1,58 @@
+In AIRFAX (Expo React Native + TypeScript + Expo Router), make 3 DEMO-POLISH improvements. 
+Keep the existing Tesla-style dark design and all current functionality (maintenance tracking, due logic, documents, local persistence).
+
+1) Display BOTH Hobbs and Tach on Home and make both updatable
+- On the Home screen (Aircraft Health), replace the single “Hobbs” display with a “Hours” card that shows:
+  - Hobbs value (e.g., 1243.6)
+  - Tach value (e.g., 1189.2)
+  - “Last updated” timestamp (small text)
+- The “Update” button should open the existing Update Hours flow (or create one if needed) with TWO numeric inputs:
+  - Hobbs
+  - Tach
+- Saving updates should persist both values and recompute maintenance statuses immediately.
+- Hour-based maintenance items must respect their configured hour source:
+  - If item.hourSource = "HOBBS", use Hobbs
+  - If item.hourSource = "TACH", use Tach
+  - If hourMode is BOTH and an item has no hourSource, default to Hobbs
+- On Settings, ensure hour mode supports BOTH (Hobbs + Tach).
+
+2) Fix iPhone keyboard bug on “Log Completion” modal/screen (cannot dismiss keyboard, cannot press Save)
+- The Log Completion UI currently opens and the iOS keyboard stays up, blocking the Save button.
+- Fix by implementing proper keyboard handling:
+  - Wrap the modal/screen content in KeyboardAvoidingView (behavior="padding" for iOS)
+  - Use a ScrollView inside so fields can scroll when keyboard is open
+  - Ensure the Save button remains reachable:
+    - either stick it above the keyboard OR place it at bottom with safe-area padding
+  - Add tap-to-dismiss keyboard:
+    - Wrap outer area in TouchableWithoutFeedback and call Keyboard.dismiss()
+  - Set ScrollView props:
+    - keyboardShouldPersistTaps="handled"
+- Confirm: user can type in notes, then dismiss keyboard, then tap Save successfully.
+
+3) Add Tesla-style “Remaining” color gauges to maintenance list items (like the provided screenshot)
+- Add a small horizontal gauge bar to each maintenance item row in:
+  - Home screen “Next Due” list
+  - Maintenance “View All” list
+- The gauge should visually show remaining time/hours with a filled colored segment + dark track:
+  - Track: dark gray
+  - Fill color matches status:
+    - GREEN, YELLOW, RED
+- Gauge rules:
+  - For date-based items: compute percent = clamp(remainingDays / intervalDays, 0..1)
+  - For hours-based items: compute percent = clamp(remainingHours / intervalHours, 0..1)
+  - For DATE_OR_HOURS: use whichever is more urgent (smaller percent / sooner due) to drive the gauge
+  - If overdue: percent = 0 and gauge should be red
+- Show a small label inside or next to the bar:
+  - e.g. “27.3 hrs” or “314 days”
+- Keep it compact and premium:
+  - height ~10–12px
+  - rounded corners
+  - subtle inner padding
+- Implement as a reusable component:
+  - components/RemainingGauge.tsx
+  - Props: { label: string; percent: number; status: "green"|"yellow"|"red" }
+
+DELIVERABLES
+- Update the relevant screens/components and maintain the existing UI style
+- Ensure no crashes and the app runs on iOS
+- Provide a short summary of which files were changed and where the new gauge component is used

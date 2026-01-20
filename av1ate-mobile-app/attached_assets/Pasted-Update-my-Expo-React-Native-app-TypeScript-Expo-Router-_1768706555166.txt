@@ -1,0 +1,64 @@
+Update my Expo React Native app (TypeScript, Expo Router) to change the Lifetime unlock price messaging from $4.99 to $9.99, and ensure the In-App Purchase flow is App Review/TestFlight safe (Apple rejected v1 because they could not upgrade to lifetime access).
+
+DO NOT redesign the UI. Keep the current Tesla-style dark UI. Only update text + IAP wiring.
+
+===============================
+A) PRICE UPDATE (UI + COPY)
+===============================
+- Everywhere in the UI where the lifetime unlock price is shown, update $4.99 to $9.99:
+  - Paywall card
+  - Paywall button label
+  - Any “Lifetime Access” sections
+- Do NOT hardcode the dollar amount if the store returns the localized price string.
+  - Preferred behavior: display the price returned by the store (ex: "$9.99") when available
+  - Fallback behavior: display "$9.99" if store price isn’t loaded yet
+
+- Update the lifetime offer copy to be clearer:
+  - “One-time purchase. No subscription.”
+  - Mention “14-day free trial” in the paywall header/subheader
+
+===============================
+B) IAP PRODUCT + ENTITLEMENT
+===============================
+- This is a SINGLE lifetime unlock, non-consumable product.
+- Ensure the app requests EXACT product ID:
+  productId = "av1ate_lifetime_999"
+- Use StoreKit purchase flow for production/TestFlight builds.
+- Store entitlement:
+  - Save isPro=true after confirmed purchase
+  - Restore purchases sets isPro=true if entitlement is found
+  - Persist in AsyncStorage (or existing storage layer)
+- Add strong error handling:
+  - If product list is empty: show “Store unavailable. Try again.”
+  - If purchase cancelled: do nothing, no scary alert
+  - If purchase fails: show a short alert “Purchase failed. Please try again.”
+  - Add “Retry” button if product fails to load
+
+===============================
+C) EXPO GO / QR BEHAVIOR (IMPORTANT)
+===============================
+- In Expo Go, purchases will NOT work.
+- Detect Expo Go runtime.
+- If user taps purchase in Expo Go:
+  Show a friendly modal/alert:
+  Title: “Purchases unavailable”
+  Message: “Purchases work in the App Store/TestFlight build. Please install the TestFlight version to unlock.”
+  Button: “OK”
+- Remove any wording like “EAS required” or “development build” from user-facing UI.
+
+===============================
+D) OPTIONAL CLEANUP (BRANDING)
+===============================
+- Ensure no remaining “AIRFAX” strings appear anywhere in the paywall or app UI.
+- Replace them with “AV1ATE Tracker”.
+
+===============================
+DELIVERABLES
+===============================
+- Implement changes in code.
+- List the files updated.
+- Provide a quick test checklist:
+  1) Paywall shows $9.99 (or store price) and 14-day trial mention
+  2) Expo Go purchase shows friendly “unavailable” message
+  3) TestFlight purchase works and unlock persists after restart
+  4) Restore purchases works

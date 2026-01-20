@@ -1,0 +1,65 @@
+In AIRFAX (Expo React Native + TypeScript + Expo Router), fix these 3 bugs reported by a first user. 
+Keep the existing Tesla-style UI and all current functionality. Make minimal, safe changes.
+
+BUG 1 — Settings > Edit Maintenance Item: numeric input gets stuck (cannot exit input/keyboard)
+Problem:
+- When editing a maintenance item in Settings, tapping the “interval” numeric field brings up the iOS keyboard and the user cannot dismiss it / exit input mode easily (similar to the old Log Completion keyboard bug).
+
+Fix requirements:
+- Apply proper iOS keyboard handling to the Edit Maintenance Item screen/modal:
+  - Wrap content in KeyboardAvoidingView (behavior="padding" on iOS)
+  - Use a ScrollView inside, with keyboardShouldPersistTaps="handled"
+  - Add tap-outside-to-dismiss:
+    - wrap outer container in TouchableWithoutFeedback and call Keyboard.dismiss()
+  - Ensure there is an obvious way to finish editing:
+    - add a “Done” button on the screen OR
+    - add returnKeyType="done" and onSubmitEditing={Keyboard.dismiss}
+- Confirm the user can focus/unfocus the interval field, dismiss keyboard, and save changes.
+
+BUG 2 — Documents upload not working in V1 offline mode
+Goal:
+- Make document upload WORK in a “static V1” offline app (no backend).
+
+Requirements:
+- Use Expo Document Picker to select PDF/images:
+  - expo-document-picker
+- Store document references locally:
+  - Persist document metadata (id, title, addedAt, mimeType, tags, linkedItemId)
+  - Persist the picked file URI (localUri)
+- Allow viewing/opening uploaded documents:
+  - On iOS/Android, tapping a document should open it using Linking.openURL(localUri)
+  - If a URI scheme requires permissions, handle gracefully with a user-friendly error message.
+- Update Documents screen:
+  - “Upload” button works
+  - Show list of uploaded files with title + date + tags
+  - Tap -> open
+- Keep it simple: no cloud sync; no auth; no Supabase.
+- If DocumentPicker returns a cached URI that might break later, implement a safer approach:
+  - copy the picked file into the app’s document directory using expo-file-system
+  - store that new permanent URI
+  (Do this if needed for reliability.)
+
+Packages:
+- Install and use:
+  - expo-document-picker
+  - expo-file-system (if copying files)
+- Ensure the feature works on a real iPhone (not just web preview).
+
+BUG 3 — “View All” list under NEXT DUE has no top padding / first row too high
+Problem:
+- On app/maintenance/index.tsx (the View All list), the top content is too close to the top, so the first item is partially hidden or uncomfortable to view.
+
+Fix requirements:
+- Add proper top padding / safe area spacing:
+  - Ensure the screen uses SafeAreaView
+  - Add contentContainerStyle paddingTop (e.g., 16–24) in ScrollView/FlatList
+  - Ensure the header/title (if any) isn’t overlapping content
+- Do NOT change the overall style; just fix layout spacing.
+
+DELIVERABLES
+- Implement the fixes and ensure the app runs without errors.
+- Provide a short summary of which files were changed and what was done for each bug.
+- Include a quick test checklist:
+  - Edit maintenance interval -> dismiss keyboard -> save
+  - Upload PDF/image -> list appears -> tap opens
+  - View All list -> first item fully visible with nice spacing

@@ -1,0 +1,113 @@
+Update AIRFAX (Expo React Native + TypeScript + Expo Router) with production-ready monetization and a feedback channel. 
+Keep the Tesla-style UI and all existing maintenance tracking logic. Use minimal-risk changes.
+
+IMPORTANT CONSTRAINTS
+- In-app purchases do NOT work in Expo Go. Implement using a library compatible with Expo development builds (EAS dev build).
+- Follow Expo’s guidance for IAP libraries: use react-native-purchases (RevenueCat) OR expo-iap. Prefer react-native-purchases for simplicity and receipt handling.
+- The app remains offline-first; purchases unlock features locally, but purchase status must be restorable via the store (“Restore Purchases”).
+
+TASKS
+
+A) Remove Documents feature completely
+- Remove the Documents card from Home.
+- Remove /documents routes/screens and any navigation to documents.
+- Remove document storage logic and keys that are only for documents.
+- Ensure no broken imports or dead UI remain.
+- App must compile cleanly.
+
+B) Add a “Send Feedback” button (very easy for users)
+- Add a prominent Settings row and optionally a Home card: “Send Feedback”.
+- On tap, open email composer or share sheet with:
+  - Subject: "AIRFAX Feedback"
+  - Body template:
+    What I was trying to do:
+    What I expected:
+    What happened:
+    Feature request:
+    Aircraft:
+    App version:
+    Device/OS:
+- Implement in services/feedback.ts with a single constant FEEDBACK_EMAIL = "YOUR_EMAIL_HERE".
+- If email cannot open, show a friendly fallback message and copy the email address.
+
+C) Implement 14-day free trial + $4.99 lifetime unlock via In-App Purchase (non-consumable)
+Goal:
+- Free to download.
+- Trial runs automatically for 14 days from first launch.
+- After trial ends, app is locked behind a paywall until user buys Lifetime for $4.99.
+- One-time purchase (non-consumable) unlocks forever. Include Restore Purchases.
+
+Entitlement rules:
+- trialStartAt is set on first launch and stored.
+- If isPro is true => full access.
+- If within trial => full access.
+- If trial expired and not pro => show Paywall and block editing features.
+
+What to block when locked:
+- Block Update Hours
+- Block Log Completion
+- Block adding/editing maintenance items
+- Allow read-only viewing (Home and lists can be visible but non-edit actions should route to Paywall)
+
+IAP implementation details (choose ONE approach):
+Preferred: react-native-purchases with RevenueCat
+- Add dependency and setup per Expo managed/dev build requirements.
+- Create a purchases service:
+  - initPurchases()
+  - getCustomerEntitlement()
+  - purchaseLifetime()
+  - restorePurchases()
+- Use environment constants for:
+  - REVENUECAT_IOS_API_KEY
+  - REVENUECAT_ANDROID_API_KEY
+  - ENTITLEMENT_ID (e.g., "pro")
+- The code should still run without crashing if keys are missing (show a dev warning).
+- Store local isPro flag, but always attempt to re-check entitlement on app start and after restore.
+
+Product setup assumptions:
+- iOS product ID: "airfax_lifetime_499"
+- Android product ID: "airfax_lifetime_499"
+(Use these constants in code and put them in one config file.)
+
+Trial persistence / anti-reset:
+- Store trialStartAt in SecureStore (expo-secure-store) rather than only AsyncStorage.
+- If SecureStore not available, fallback to AsyncStorage.
+
+Paywall screen:
+Create a new route: app/paywall.tsx
+- Tesla-style dark card layout
+- Title: “Unlock AIRFAX”
+- Show remaining trial days if trial active
+- If expired:
+  - Button: “Unlock Lifetime — $4.99”
+  - Button: “Restore Purchases”
+  - Small text: “One-time purchase. No subscription.”
+- Include a lightweight benefits list:
+  - Maintenance reminders & status dashboard
+  - Track Hobbs/Tach and log completions
+  - Multi-aircraft support (if already implemented)
+- Add a “Not now” button ONLY if trial still active; if expired, user must unlock to edit.
+
+App integration:
+- On app start (RootLayout or a provider), initialize purchases and load entitlement.
+- Add a simple access control helper:
+  - canEdit = isPro OR trialActive
+- For any blocked action, route to /paywall.
+
+D) Build & testing notes in output
+After implementing, include:
+- Which files changed
+- Any new packages installed
+- Exact steps to test IAP:
+  - “You must create an EAS development build; IAP will not work in Expo Go.”
+  - Where to place RevenueCat keys
+  - How to test restore
+
+DELIVERABLE QUALITY BAR
+- No crashes
+- Trial countdown works
+- Paywall reliably blocks edits after day 14
+- Purchase unlock works and persists
+- Restore purchases works
+- Feedback button works
+- Documents fully removed

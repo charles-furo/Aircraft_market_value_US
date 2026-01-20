@@ -1,0 +1,80 @@
+Add an in-app Feedback feature to AIRFAX (Expo React Native + TypeScript + Expo Router) that sends feedback to a Google Form (Option 2). 
+Keep Tesla-style dark UI. No backend. Minimal-risk changes.
+
+GOAL (User Experience)
+- User can type feedback inside the app (text field).
+- User taps “Send”.
+- The feedback is submitted to my Google Form (preferred), and user sees a success confirmation.
+- If submission fails (no internet, etc.), provide fallback: copy feedback to clipboard and/or open the Google Form in the browser.
+
+ASSUMPTIONS / CONFIG
+- I will provide a Google Form URL and the Google Form “entry IDs” for each field (entry.xxxxx).
+- Create a single config file where I can paste:
+  - GOOGLE_FORM_ACTION_URL (the formResponse endpoint)
+  - ENTRY_MESSAGE_ID (entry.xxxxx)
+  - ENTRY_EMAIL_ID (optional)
+  - ENTRY_AIRCRAFT_ID (optional)
+  - ENTRY_DEVICE_ID (optional)
+  - ENTRY_APPVERSION_ID (optional)
+  Use placeholder strings and clearly mark where I should paste my real values.
+
+UI REQUIREMENTS (Tesla-style)
+- Add Settings route: app/settings/feedback.tsx (or app/feedback.tsx) and link it from Settings as “Send Feedback”.
+- The feedback screen should include:
+  1) Title: “Feedback”
+  2) Multi-line text input: “What would you like to improve?”
+  3) Optional field: email (so I can reply)
+  4) “Send” button (primary)
+  5) Secondary actions:
+     - “Open Form” (opens in browser)
+     - “Copy” (copies the message to clipboard)
+- Keep dark cards, rounded corners, subtle borders, calm spacing.
+
+DATA INCLUDED IN SUBMISSION
+When user sends feedback, submit:
+- message (required)
+- optional email
+- current selected aircraft tail/model (if multi-aircraft exists; otherwise current aircraft)
+- app version/build (if available)
+- device OS + model (if available)
+- timestamp ISO string
+- trial/pro status (if monetization exists)
+Build a formatted “metadata” string for the device/app fields and submit it into a dedicated form field if configured, otherwise append it to the end of the message.
+
+TECHNICAL IMPLEMENTATION
+- Use a simple HTTP POST to the Google Form “formResponse” endpoint using URL-encoded form data:
+  - Content-Type: application/x-www-form-urlencoded
+- Use fetch() to POST the values.
+- Google Forms often does not return CORS-friendly responses; handle success as:
+  - treat HTTP 200/302 as success
+  - if response is opaque or throws but network likely succeeded, still show a “Sent” confirmation and provide “Open Form” fallback
+- Add basic validation:
+  - message must be at least 10 characters
+  - disable Send while sending
+- On success:
+  - clear the message field
+  - show toast/alert “Thanks! Feedback sent.”
+- On failure:
+  - show alert “Couldn’t send right now. Please copy or open the form.”
+  - enable Copy and Open Form buttons
+
+OFFLINE / RELIABILITY
+- If send fails, store the draft in AsyncStorage under feedbackDraft so it is not lost.
+- When reopening the Feedback screen, restore the draft if present.
+
+FILES / STRUCTURE
+- Add:
+  - services/feedbackForm.ts (handles building payload + submitting)
+  - config/feedback.ts (holds URLs + entry IDs)
+  - app/settings/feedback.tsx (screen)
+- Update:
+  - app/settings/index.tsx to add a row/button to open the Feedback screen
+  - optionally Home screen to add a small “Feedback” button that links to it
+
+DELIVERABLES
+- Implement the feedback feature end-to-end
+- Provide a short note explaining where I must paste my Google Form URL and entry IDs
+- Provide a quick manual test checklist:
+  - type feedback -> send -> success message
+  - airplane metadata included
+  - airplane offline -> send fails -> draft preserved -> copy works -> open form works

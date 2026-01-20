@@ -1,0 +1,142 @@
+Upgrade AIRFAX from a static home screen into an operational V1 aircraft maintenance tracker.
+
+NON-NEGOTIABLES
+- Keep the existing Tesla-style dark UI and Home layout.
+- Use Expo (React Native) + TypeScript.
+- Use Expo Router (file-based routes).
+- The app must work end-to-end for a single user on-device with local persistence (no login required for V1).
+- Use local storage (AsyncStorage) for all V1 data so the app works offline.
+- No backend required in V1. (We can add Supabase later.)
+
+CORE V1 USER EXPERIENCE (what the end user can do)
+1) Track aircraft status
+- User can set:
+  - Tail number, model (default Piper PA-28 / N28PA)
+  - Preferred hour source: Hobbs only, Tach only, or both
+- User can update current Hobbs and/or Tach and the current date is stored automatically.
+- User can view “Last completed” information for each maintenance item.
+
+2) Compute Due Soon / Overdue correctly
+- The app maintains a list of maintenance items with rules:
+  - DATE rule (calendar)
+  - HOURS rule (Hobbs or Tach)
+  - DATE_OR_HOURS rule (whichever comes first)
+- For each item, compute:
+  - dueDate (if applicable)
+  - dueHours (if applicable)
+  - status (GREEN / YELLOW / RED)
+  - “due in X days” or “due in Y hours”
+- Thresholds must be configurable globally and per item:
+  - Default date thresholds: 30 / 10 / 3 days
+  - Default hour thresholds: 10 / 5 / 1 hours
+- Use the closest threshold to set YELLOW; RED if overdue.
+
+3) Notifications like a modern consumer app
+- Push notifications on device (Expo Notifications)
+- Daily background check (at a consistent time like 9am local) and also when hours are updated
+- When an item enters YELLOW: send push once (do not spam daily)
+- When an item becomes RED: send push once (do not spam daily)
+- Weekly digest push every Sunday morning with a summary of Due Soon and Overdue
+- Email fallback can be implemented as a simple “Share/Email report” button for V1 (generate a text summary and open the device share sheet). Do NOT require backend email sending in V1.
+
+MAINTENANCE ITEMS (seed data for a Piper owner; editable)
+Create a default list on first launch:
+- Annual Inspection: DATE rule, interval 12 months (365 days is OK), status based on date
+- Oil Change: HOURS rule, interval 50 hours (default based on Hobbs), status based on hours
+- ELT Battery: DATE rule, interval 24 months
+- (Optional if you want) Transponder: DATE rule, interval 24 months
+- (Optional) Pitot-Static: DATE rule, interval 24 months
+Allow the user to add/edit/delete items in Settings.
+
+DOCUMENTS (V1: local document vault)
+- Add a Documents screen:
+  - User can upload files (PDFs/images) from device using Expo DocumentPicker
+  - Store the file metadata + local URI in AsyncStorage
+  - Allow tagging a document to a maintenance item (Annual, Oil, etc.)
+  - Show a list with title, date, tags; tap to open the document
+- Include categories: Logbook entry, IA sign-off, Invoice, Other
+
+SCREENS / ROUTES (Expo Router)
+- app/index.tsx : Home dashboard
+  - shows aircraft info
+  - overall status pill (based on worst item status)
+  - current hours card with Update button
+  - Next Due list (top 3 by urgency)
+  - Documents card
+- app/update-hours.tsx : Update Hobbs/Tach screen or modal route
+  - inputs for Hobbs and Tach (show only what user enabled)
+  - Save updates and recompute statuses
+- app/maintenance/index.tsx : All maintenance items list
+  - filters: Due Soon / Overdue / All
+  - tap item -> detail
+- app/maintenance/[id].tsx : Maintenance item detail
+  - show rule, last completed, due date/hours, status
+  - “Log completion” button:
+    - prompts for date + hours + notes
+    - updates last completed and recomputes due
+- app/documents/index.tsx : Documents vault
+  - upload button
+  - list of uploaded docs
+  - tag docs to items
+- app/settings/index.tsx : Settings
+  - edit aircraft model/tail
+  - choose hour source (Hobbs/Tach/Both)
+  - configure default thresholds (days and hours)
+  - manage maintenance items (add/edit/delete)
+  - enable/disable notifications
+
+DATA MODEL (keep simple but clear)
+Persist these in AsyncStorage:
+- aircraft: { model, tail, hourMode: "HOBBS" | "TACH" | "BOTH" }
+- current: { hobbs?: number, tach?: number, updatedAt: ISO string }
+- thresholds:
+  - dateThresholdDays: number[] default [30,10,3]
+  - hourThresholds: number[] default [10,5,1]
+- maintenanceItems: array of:
+  {
+    id, name,
+    ruleType: "DATE" | "HOURS" | "DATE_OR_HOURS",
+    intervalDays?: number,
+    intervalHours?: number,
+    hourSource?: "HOBBS" | "TACH",
+    lastCompletedAt?: ISO string,
+    lastCompletedHours?: number,
+    notes?: string
+  }
+- documents: array of:
+  { id, title, localUri, mimeType, addedAt, tags: string[], linkedItemId?: string }
+
+COMPUTATION DETAILS
+- dueDate = lastCompletedAt + intervalDays (if DATE or DATE_OR_HOURS and intervalDays exists)
+- dueHours = lastCompletedHours + intervalHours (if HOURS or DATE_OR_HOURS and intervalHours exists)
+- For DATE_OR_HOURS: whichever is earlier / more urgent determines status label on Home, but show both in detail screen
+- Status rules:
+  - RED if overdue (today > dueDate OR currentHours > dueHours)
+  - YELLOW if within any threshold window:
+    - days remaining <= min(dateThresholdDays) or within any of the configured thresholds
+    - hours remaining <= min(hourThresholds) or within any configured threshold
+  - GREEN otherwise
+- Sort “Next Due” by urgency:
+  - Overdue first, then soonest due by date/hours
+
+UI REQUIREMENTS
+- Preserve Tesla-style: dark background, rounded cards, calm spacing.
+- Home screen stays very similar to current screenshot.
+- Add subtle status colors only in dots/pills (don’t make whole screen bright).
+- Make Update Hours and Log Completion flows very fast (minimal taps).
+
+DELIVERABLE
+- Implement all screens and routes
+- Implement AsyncStorage persistence
+- Implement due computation logic in a separate module (e.g., logic/statusCalculator.ts)
+- Implement notifications (Expo Notifications):
+  - request permission on first enable
+  - schedule daily check and weekly digest
+  - avoid duplicate spam (store last-notified status per item)
+- Ensure the app runs without errors and is usable on a real phone.
+
+After implementing, provide:
+- File tree summary
+- Where the main logic lives
+- Any setup steps required (permissions, packages)
+- Quick manual test checklist (update hours -> item turns yellow/red -> notification scheduled)
