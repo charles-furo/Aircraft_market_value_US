@@ -38,8 +38,7 @@
           }
         }
       ],
-      "expo-web-browser",
-      "react-native-purchases"
+      "expo-web-browser"
     ],
     "experiments": {
       "reactCompiler": true
